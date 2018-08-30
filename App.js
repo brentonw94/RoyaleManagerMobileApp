@@ -2,7 +2,7 @@ import React from 'react';
 import Fetch from 'react-native-fetch';
 import ReactNativeComponentTree from 'react-native/Libraries/Renderer/shims/ReactNativeComponentTree';
 import { Container, Header, Title, Button, Left, Right, Body, Icon, Footer, FooterTab, Content } from 'native-base';
-import { StyleSheet, Text, View, TouchableOpacity, FlatList, Modal, TouchableWithoutFeedback, ScrollView, Image } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, FlatList, Modal, TouchableWithoutFeedback, ScrollView, Image, LayoutAnimation } from 'react-native';
 import Swiper from 'react-native-swiper';
 import downArrow from './images/downArrow.png';
 import middleArrow from './images/middleArrow.png';
@@ -17,6 +17,7 @@ export default class App extends React.Component {
 
     this.state = {
         modalVisible:false,
+        sorting:"clanRank",
         buttons:{
           index:1,
 
@@ -65,7 +66,7 @@ export default class App extends React.Component {
 
     for(var i = 0; i < members.length; i++){
       members[i].clanRankDiff = members[i].previousClanRank - members[i].clanRank;
-      members[i].donationsDiff = (members[i].donations - members[i].donationsReceived)/(members[i].donations);
+      members[i].donationsDiff = (((members[i].donations - members[i].donationsReceived)/(members[i].donations)*100).toFixed(0))+"%";
     }
 
 
@@ -82,7 +83,7 @@ export default class App extends React.Component {
   render() {
 
 
-    const {members, selectedMember, buttons, modalVisible} = this.state;
+    const {selectedMember, buttons, modalVisible, sorting} = this.state;
 
 
     return (
@@ -125,22 +126,96 @@ export default class App extends React.Component {
           <Text style={styles.text}>Overview</Text>
         </View>
         <View style={styles.members}>
+        <View style={styles.memberButtonHeader}>
+        <Button style={styles.sorterButton} onPress={() => {
+            var mem = this.state.members.sort(function(a, b) { return a.clanRank - b.clanRank; });
+
+            this.setState({
+              members:mem,
+              sorting:"clanRank",
+              index: null,
+            }, () => {
+              LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+              this.setState({
+                index:1
+              })
+            });
+
+        }}>
+          <Text>Rank</Text>
+        </Button>
+          <Button style={styles.sorterButton} onPress={() => {
+              var mem = this.state.members.sort(function(a, b) { return b.expLevel - a.expLevel; });
+
+
+              this.setState({
+                members:mem,
+                sorting:"expLvl",
+                index: null,
+              }, () => {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+                this.setState({
+                  index:1
+                })
+              });
+
+          }}>
+            <Text>Exp Lvl</Text>
+          </Button>
+          <Button style={styles.sorterButton} onPress={() => {
+              var mem = this.state.members.sort(function(a, b) { return parseInt(b.donationsDiff.replace("%", "")) - parseInt(a.donationsDiff.replace("%","")); });
+
+              console.log(mem);
+              LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+              this.setState({
+                members:mem,
+                sorting:"donationsDiff",
+                index: null,
+              },() => {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+                this.setState({
+                  index:1
+                })
+              });
+
+          }}>
+            <Text>Donation %</Text>
+          </Button>
+          <Button style={styles.sorterButton}>
+            <Text>War wins</Text>
+          </Button>
+          <Button style={styles.sorterButton}>
+            <Text>War cards</Text>
+          </Button>
+        </View>
         <FlatList
-            data={members}
+            data={this.state.members}
+            extraData={this.state.members}
             style={styles.memberList}
+            extraData={this.state.index}
             renderItem={({item}) =>
-            <View style={styles.singleMember}
+            <TouchableOpacity style={styles.singleMember}
                   onPress={()=> {
                     this.setState({modalVisible:true, selectedMember:item})
                 }}>
               <Text style={styles.memberRank}>{item.clanRank}</Text>
               <Text style={styles.memberName}>{item.name}</Text>
+              {sorting == "clanRank" ? <Image style={styles.positionArrows} source={item.clanRankDiff > 0 ? upArrow : item.clanRankDiff === 0 ? middleArrow : downArrow}></Image> : []}
+              <Text style={styles.memberPosition}>{
+                sorting === "expLvl"       ?
+                item.expLevel              :
+                sorting === "donationsDiff" ?
+                item.donationsDiff          :
+            //    sorting === "warWins"      ?
+            //    item.warWins             :
+            //    sorting === "warCards"     ?
+            //      item.warCards            :
+                sorting === "clanRank"     ?
+                Math.abs(item.clanRankDiff) : ""
+              }</Text>
 
-              <Image style={styles.positionArrows} source={item.clanRankDiff > 0 ? upArrow : item.clanRankDiff === 0 ? middleArrow : downArrow}></Image>
-              <Text style={styles.memberPosition}>{Math.abs(item.clanRankDiff)}</Text>
 
-
-            </View>
+            </TouchableOpacity>
           }
           />
 
@@ -324,14 +399,13 @@ const styles = StyleSheet.create({
     margin:5,
     width:"96%",
     height:30,
-    lineHeight:30,
-    textAlign:"center",
     backgroundColor:"white",
     padding:"1%",
     borderColor:"black",
     backgroundColor:"rgb(200,200,200)",
     borderWidth:3,
-    borderRadius:3
+    borderRadius:3,
+    position:"relative"
 
   },
   memberRank : {
@@ -412,6 +486,16 @@ positionArrows : {
   right : "10%",
   top: -5,
   position: "absolute"
+},
+memberButtonHeader :{
+  flexDirection : "row",
+  padding:"1%"
+},
+sorterButton : {
+  height:30,
+  width:"18%",
+  position:"relative",
+  margin:"1%"
 }
 
 });
