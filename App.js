@@ -4,9 +4,10 @@ import ReactNativeComponentTree from 'react-native/Libraries/Renderer/shims/Reac
 import { Container, Header, Title, Button, Left, Right, Body, Icon, Footer, FooterTab, Content } from 'native-base';
 import { StyleSheet, Text, View, TouchableOpacity, FlatList, Modal, TouchableWithoutFeedback, ScrollView, Image, LayoutAnimation } from 'react-native';
 import Swiper from 'react-native-swiper';
-import downArrow from './images/downArrow.png';
-import middleArrow from './images/middleArrow.png';
-import upArrow from './images/upArrow.png';
+
+
+import MemberList from './components/MemberList'
+
 
 function countInArray(array, value){ var count = 0; for(var i = 0; i < array.length; i++){ if(array[i] === value){ count++; } } return count; }
 
@@ -30,6 +31,13 @@ export default class App extends React.Component {
           right:{
             active:false
           }
+        },
+        reverse : {
+          clanRank : false,
+          expLvl : false,
+          donations : false,
+          warWins : false,
+          warCards : false
         }
     }
 
@@ -61,12 +69,16 @@ export default class App extends React.Component {
     })
   }
 
-
+  getMember = (member) => {
+        this.setState({
+          modalVisible:true, selectedMember:member
+        })
+      }
   calculateMemberStats(members){
 
     for(var i = 0; i < members.length; i++){
       members[i].clanRankDiff = members[i].previousClanRank - members[i].clanRank;
-      members[i].donationsDiff = (((members[i].donations - members[i].donationsReceived)/(members[i].donations)*100).toFixed(0))+"%";
+      members[i].donationsDiff = (Number(members[i].donations - members[i].donationsReceived));
     }
 
 
@@ -77,13 +89,27 @@ export default class App extends React.Component {
 
 
   }
+  calculateWarStats(warlog){
 
+    var memberLog = [];
+
+    for(var i = 0; i < warlog.length; i++){
+      var members = warlog[i].participants;
+      for(var j = 0; j < members.length; j++){
+
+        var tag = members[j].tag;
+        members[j]
+
+      }
+    }
+
+  }
 
 
   render() {
 
 
-    const {selectedMember, buttons, modalVisible, sorting} = this.state;
+    const {selectedMember, buttons, modalVisible, sorting, reverse} = this.state;
 
 
     return (
@@ -127,15 +153,22 @@ export default class App extends React.Component {
         </View>
         <View style={styles.members}>
         <View style={styles.memberButtonHeader}>
-        <Button style={styles.sorterButton} onPress={() => {
-            var mem = this.state.members.sort(function(a, b) { return a.clanRank - b.clanRank; });
+        <Button style={{"backgroundColor":sorting != "clanRank" ? "blue" : reverse.clanRank ? "green" : "red"}, styles.sorterButton} onPress={() => {
+
+            var direction = reverse;
+
+            var mem = this.state.members.sort(function(a, b) {
+              return !direction.clanRank ? a.clanRank - b.clanRank : b.clanRank - a.clanRank;
+            });
+
+              direction.clanRank = direction.clanRank ? false : true;
 
             this.setState({
               members:mem,
               sorting:"clanRank",
               index: null,
+              reverse : direction,
             }, () => {
-              LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
               this.setState({
                 index:1
               })
@@ -153,7 +186,6 @@ export default class App extends React.Component {
                 sorting:"expLvl",
                 index: null,
               }, () => {
-                LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
                 this.setState({
                   index:1
                 })
@@ -163,23 +195,20 @@ export default class App extends React.Component {
             <Text>Exp Lvl</Text>
           </Button>
           <Button style={styles.sorterButton} onPress={() => {
-              var mem = this.state.members.sort(function(a, b) { return parseInt(b.donationsDiff.replace("%", "")) - parseInt(a.donationsDiff.replace("%","")); });
+              var mem = this.state.members.sort(function(a, b) { return b.donationsDiff- a.donationsDiff; });
 
-              console.log(mem);
-              LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
               this.setState({
                 members:mem,
                 sorting:"donationsDiff",
                 index: null,
               },() => {
-                LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
                 this.setState({
                   index:1
                 })
               });
 
           }}>
-            <Text>Donation %</Text>
+            <Text>Donation &#177;</Text>
           </Button>
           <Button style={styles.sorterButton}>
             <Text>War wins</Text>
@@ -188,36 +217,20 @@ export default class App extends React.Component {
             <Text>War cards</Text>
           </Button>
         </View>
-        <FlatList
-            data={this.state.members}
-            extraData={this.state.members}
-            style={styles.memberList}
-            extraData={this.state.index}
-            renderItem={({item}) =>
-            <TouchableOpacity style={styles.singleMember}
-                  onPress={()=> {
-                    this.setState({modalVisible:true, selectedMember:item})
-                }}>
-              <Text style={styles.memberRank}>{item.clanRank}</Text>
-              <Text style={styles.memberName}>{item.name}</Text>
-              {sorting == "clanRank" ? <Image style={styles.positionArrows} source={item.clanRankDiff > 0 ? upArrow : item.clanRankDiff === 0 ? middleArrow : downArrow}></Image> : []}
-              <Text style={styles.memberPosition}>{
-                sorting === "expLvl"       ?
-                item.expLevel              :
-                sorting === "donationsDiff" ?
-                item.donationsDiff          :
-            //    sorting === "warWins"      ?
-            //    item.warWins             :
-            //    sorting === "warCards"     ?
-            //      item.warCards            :
-                sorting === "clanRank"     ?
-                Math.abs(item.clanRankDiff) : ""
-              }</Text>
 
 
-            </TouchableOpacity>
-          }
+
+        <MemberList
+          members={this.state.members}
+          index={this.state.index}
+          sorting={this.state.sorting}
+          handlePress={this.getMember}
           />
+
+
+
+
+
 
           <Modal
             animationType="slide"
@@ -335,7 +348,7 @@ export default class App extends React.Component {
        headers={{ "authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiIsImtpZCI6IjI4YTMxOGY3LTAwMDAtYTFlYi03ZmExLTJjNzQzM2M2Y2NhNSJ9.eyJpc3MiOiJzdXBlcmNlbGwiLCJhdWQiOiJzdXBlcmNlbGw6Z2FtZWFwaSIsImp0aSI6IjRkNzIxZTZkLTFjMzYtNDEzMC1hYTMwLWE4NDE4MDkxMTNjZSIsImlhdCI6MTUzNDg1MDg3Mywic3ViIjoiZGV2ZWxvcGVyL2MwZDM1NzM5LWY4MTUtZGUxMy1hZDNlLWIyZWQ4NjE3NDZjNCIsInNjb3BlcyI6WyJyb3lhbGUiXSwibGltaXRzIjpbeyJ0aWVyIjoiZGV2ZWxvcGVyL3NpbHZlciIsInR5cGUiOiJ0aHJvdHRsaW5nIn0seyJjaWRycyI6WyI1OC43LjE0Ni4xNiJdLCJ0eXBlIjoiY2xpZW50In1dfQ.CjXk9jrx8IT9lqjFp0k_UmcS_qMIfxRZ2iIP2pDdrem1yJw4dkWn1eOVyZ8NQpsTJ93FgQPpTY7UfLx81fIzFA", "Accept": "application/json" }}
        retries={3}
        timeout={3000}
-       onResponse={async (res) => { const json = await res.json(); var wars = json.items; this.setState({ warlog:wars })
+       onResponse={async (res) => { const json = await res.json(); var wars = json.items; this.setState({ warlog:wars }); this.calculateWarStats(wars);
        }}
        onError={console.error}
      />
@@ -389,36 +402,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#92BBD9',
-  },
-  memberList: {
-    flex:1,
-    width:"100%"
-
-  },
-  singleMember: {
-    margin:5,
-    width:"96%",
-    height:30,
-    backgroundColor:"white",
-    padding:"1%",
-    borderColor:"black",
-    backgroundColor:"rgb(200,200,200)",
-    borderWidth:3,
-    borderRadius:3,
-    position:"relative"
-
-  },
-  memberRank : {
-    left:0,
-    position:"absolute"
-  },
-  memberName : {
-    left:"30%",
-    position:"absolute"
-  },
-  memberPosition : {
-    right:"5%",
-    position:"absolute"
   },
   text: {
     color: '#fff',
@@ -481,11 +464,6 @@ titleName : {
   fontSize: 20,
   fontWeight : "bold",
 
-},
-positionArrows : {
-  right : "10%",
-  top: -5,
-  position: "absolute"
 },
 memberButtonHeader :{
   flexDirection : "row",
